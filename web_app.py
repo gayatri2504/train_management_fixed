@@ -650,53 +650,6 @@ def render_page(title, body, extra_head=""):
             0%, 30%, 100% {{ opacity: 0.2; box-shadow: none; }}
             45%, 75% {{ opacity: 1; box-shadow: 0 0 16px rgba(34, 197, 94, 0.7); }}
         }}
-        .train-rail {{
-            width: min(1180px, calc(100% - 32px));
-            margin: 14px auto 0;
-            position: relative;
-            height: 42px;
-            overflow: hidden;
-        }}
-        .train-track {{
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 24px;
-            height: 6px;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
-        }}
-        .train-track::before {{
-            content: "";
-            position: absolute;
-            inset: -5px 0 auto 0;
-            height: 18px;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent 0 8px,
-                rgba(15, 23, 42, 0.12) 8px 16px
-            );
-            border-radius: 999px;
-        }}
-        .train-runner {{
-            position: absolute;
-            right: -220px;
-            top: 0;
-            font-size: 1.7rem;
-            line-height: 1;
-            animation: trainRide 12s linear infinite;
-            will-change: transform;
-            white-space: nowrap;
-        }}
-        @keyframes trainRide {{
-            0% {{ transform: translateX(0); }}
-            100% {{ transform: translateX(calc(-100vw - 460px)); }}
-        }}
-        @media (prefers-reduced-motion: reduce) {{
-            .train-runner {{
-                animation-duration: 24s;
-            }}
-        }}
         {extra_head}
     </style>
 </head>
@@ -710,10 +663,6 @@ def render_page(title, body, extra_head=""):
                 <span class="signal-light signal-green"></span>
             </div>
         </div>
-    </div>
-    <div class="train-rail no-print" aria-hidden="true">
-        <div class="train-track"></div>
-        <div class="train-runner">🚂🚃🚃🚃</div>
     </div>
     {body}
     <script>
@@ -1221,12 +1170,19 @@ def render_dashboard(username, message="", level="success"):
 
 def render_ticket_page(username, ticket, message="", level="success"):
     fare_value = ticket["AC_ticket_fair"] if ticket["category"] == "AC" else ticket["GEN_ticket_fair"]
+    show_confirmation_train = level == "success" and "ticket booked successfully" in message.lower()
+    train_animation_markup = """
+            <div class="ticket-train-rail no-print" id="ticket-train-rail" aria-hidden="true">
+                <div class="ticket-train-track"></div>
+                <div class="ticket-train-runner">🚂🚃🚃🚃</div>
+            </div>
+    """ if show_confirmation_train else ""
     body = """
     <main class="shell dashboard-shell">
         {nav}
         {message_block}
         <section class="card ticket-print-shell">
-            <div class="ticket-topbar">
+                <div class="ticket-topbar">
                 <div>
                     <span class="label-chip">Signed in as {username}</span>
                     <h1>Printable Ticket</h1>
@@ -1236,7 +1192,8 @@ def render_ticket_page(username, ticket, message="", level="success"):
                     <a class="secondary-link" href="{booking_route}">Back to Booking Counter</a>
                     <button type="button" onclick="window.print()">Print Ticket</button>
                 </div>
-            </div>
+                </div>
+                {train_animation}
             <article class="ticket-sheet">
                 <div class="ticket-sheet-head">
                     <div>
@@ -1293,6 +1250,7 @@ def render_ticket_page(username, ticket, message="", level="success"):
     """.format(
         nav=render_nav("booking"),
         message_block=format_message(message, level),
+        train_animation=train_animation_markup,
         username=escape(username),
         booking_route=BOOKING_COUNTER_ROUTE,
         train_name=escape(ticket["trainName"].strip()),
@@ -1411,6 +1369,39 @@ def render_ticket_page(username, ticket, message="", level="success"):
         .ticket-address {
             margin-top: 14px;
         }
+        .ticket-train-rail {
+            width: 100%;
+            margin: 4px 0 10px;
+            position: relative;
+            height: 44px;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #f1f5f9;
+            border: 1px solid #dbeafe;
+        }
+        .ticket-train-track {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            top: 25px;
+            height: 6px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+        }
+        .ticket-train-runner {
+            position: absolute;
+            right: -220px;
+            top: 4px;
+            font-size: 1.75rem;
+            line-height: 1;
+            animation: ticketTrainRide 6s linear 1;
+            will-change: transform;
+            white-space: nowrap;
+        }
+        @keyframes ticketTrainRide {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-100vw - 420px)); }
+        }
         @media (max-width: 900px) {
             .ticket-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1448,6 +1439,20 @@ def render_ticket_page(username, ticket, message="", level="success"):
             }
         }
     """
+    if show_confirmation_train:
+        body += """
+        <script>
+            window.addEventListener("load", function () {
+                var rail = document.getElementById("ticket-train-rail");
+                if (!rail) return;
+                setTimeout(function () {
+                    rail.style.transition = "opacity 0.4s ease";
+                    rail.style.opacity = "0";
+                    setTimeout(function () { rail.remove(); }, 420);
+                }, 6200);
+            });
+        </script>
+        """
     return render_page("Printable Ticket", body, extra_head)
 
 
