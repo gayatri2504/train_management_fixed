@@ -14,11 +14,19 @@ import mysql.connector
 from mysql.connector import Error
 
 
+def get_env_any(*names, default=""):
+    for name in names:
+        value = os.getenv(name)
+        if value not in (None, ""):
+            return value
+    return default
+
+
 DB_CONFIG = {
-    "host": os.getenv("MYSQL_HOST", "localhost"),
-    "user": os.getenv("MYSQL_USER", "root"),
-    "database": os.getenv("MYSQL_DATABASE", "railway_management_system"),
-    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "host": get_env_any("MYSQL_HOST", "MYSQLHOST", default="localhost"),
+    "user": get_env_any("MYSQL_USER", "MYSQLUSER", default="root"),
+    "database": get_env_any("MYSQL_DATABASE", "MYSQLDATABASE", default="railway_management_system"),
+    "port": int(get_env_any("MYSQL_PORT", "MYSQLPORT", default="3306")),
 }
 WAITING_LIST_LIMIT = 2
 APP_USERNAME = os.getenv("APP_USERNAME", "admin")
@@ -37,7 +45,7 @@ SESSIONS = {}
 def get_db_password():
     global SERVER_PASSWORD
     if SERVER_PASSWORD is None:
-        SERVER_PASSWORD = os.getenv("MYSQL_PASSWORD", "").strip()
+        SERVER_PASSWORD = get_env_any("MYSQL_PASSWORD", "MYSQLPASSWORD", default="").strip()
         if not SERVER_PASSWORD and DEMO_DB_PASSWORD:
             # Demo fallback to avoid background-server prompts that can hang requests.
             SERVER_PASSWORD = DEMO_DB_PASSWORD
